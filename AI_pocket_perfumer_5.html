@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI 口袋調香師｜Step Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #020617;
+      --card: rgba(15, 23, 42, 0.9);
+      --accent: #fb923c;
+      --accent-soft: rgba(248, 171, 116, 0.18);
+      --text-main: #e5e7eb;
+      --text-sub: #9ca3af;
+      --border-subtle: rgba(148, 163, 184, 0.4);
+      --pill-bg: rgba(15, 23, 42, 0.8);
+      --shadow-soft: 0 24px 60px rgba(15, 23, 42, 0.9);
+      --radius-xl: 26px;
+      --radius-pill: 999px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Noto Sans TC", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, var(--bg) 55%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 1120px;
+      margin: auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-pill {
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.75rem;
+      border: 1px solid rgba(249, 115, 22, 0.35);
+    }
+
+    .title-block p {
+      margin: 6px 0 0;
+      font-size: 0.86rem;
+      color: var(--text-sub);
+    }
+
+    .badge {
+      padding: 6px 12px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      font-size: 0.76rem;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(16px);
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      transition: grid-template-columns 0.2s ease;
+    }
+
+    .layout.show-step2 {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.05fr);
+    }
+
+    @media (max-width: 880px) {
+      .layout,
+      .layout.show-step2 {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body { padding: 16px; }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(248, 171, 116, 0.28), transparent 60%),
+                  radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 60%);
+      opacity: 0.55;
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .card-inner { position: relative; z-index: 1; }
+
+    .step-card.step2 { display: none; }
+    .layout.show-step2 .step-card.step2 { display: block; }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(130deg, #f97316, #fb7185);
+      box-shadow: 0 0 0 4px rgba(248, 171, 116, 0.15);
+    }
+
+    .field-group { margin-bottom: 16px; }
+
+    .field-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .field-hint {
+      font-size: 0.76rem;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .radio-row,
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .radio-pill input { display: none; }
+
+    .radio-pill label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 12px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      background: var(--pill-bg);
+      font-size: 0.8rem;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.18s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .radio-pill input:checked + label {
+      border-color: var(--accent);
+      color: #fed7aa;
+      background: linear-gradient(135deg, rgba(248, 171, 116, 0.28), rgba(251, 113, 133, 0.18));
+      box-shadow: 0 0 0 1px rgba(248, 171, 116, 0.2);
+    }
+
+    .pill {
+      padding: 5px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      cursor: pointer;
+      background: var(--pill-bg);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.16s ease;
+      user-select: none;
+    }
+
+    .pill.selected {
+      border-color: var(--accent);
+      color: #fed7aa;
+      background: rgba(248, 171, 116, 0.2);
+    }
+
+    textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.85);
+      color: var(--text-main);
+      padding: 8px 10px;
+      font-size: 0.9rem;
+      resize: vertical;
+      min-height: 68px;
+      outline: none;
+      transition: border 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(248, 171, 116, 0.25);
+      background: rgba(15, 23, 42, 0.96);
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      background: linear-gradient(90deg, rgba(148, 163, 184, 0.3), rgba(248, 171, 116, 0.7));
+      border-radius: 999px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 2px solid #0b1120;
+      background: radial-gradient(circle at 30% 30%, #fee2e2, #fb923c);
+      margin-top: -5px;
+      box-shadow: 0 0 0 4px rgba(248, 171, 116, 0.25);
+    }
+
+    .btn-primary {
+      border: none;
+      border-radius: var(--radius-pill);
+      padding: 9px 18px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: #0b1120;
+      background: linear-gradient(135deg, #fb923c, #fb7185);
+      box-shadow: 0 14px 30px rgba(248, 171, 116, 0.45);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 40px rgba(248, 171, 116, 0.7);
+      filter: brightness(1.03);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 10px 22px rgba(248, 171, 116, 0.4);
+    }
+
+    .btn-primary span.icon { font-size: 1.05rem; }
+
+    .ghost-chip {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      padding: 3px 8px;
+      border-radius: var(--radius-pill);
+      border: 1px dashed rgba(148, 163, 184, 0.5);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+    }
+
+    .result-block {
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.96));
+      font-size: 0.86rem;
+      white-space: pre-line;
+    }
+
+    .result-title {
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+
+    .memo-card {
+      margin-top: 8px;
+      border-radius: 20px;
+      padding: 12px 14px;
+      background: radial-gradient(circle at top, rgba(248, 171, 116, 0.2), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(248, 171, 116, 0.5);
+      font-size: 0.9rem;
+    }
+
+    .memo-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .memo-tagline {
+      font-size: 0.82rem;
+      color: #fed7aa;
+      margin-bottom: 8px;
+    }
+
+    .memo-section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-sub);
+      margin: 8px 0 4px;
+    }
+
+    .note-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .note-badge {
+      padding: 4px 9px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(30, 64, 175, 0.7);
+      background: rgba(15, 23, 42, 0.8);
+      font-size: 0.76rem;
+      color: #e0f2fe;
+    }
+
+    .memo-body {
+      font-size: 0.86rem;
+      color: var(--text-main);
+      line-height: 1.5;
+      margin-top: 4px;
+    }
+
+    .subdued {
+      color: var(--text-sub);
+      font-size: 0.78rem;
+      margin-top: 6px;
+    }
+
+    .mixing-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4), rgba(15, 23, 42, 0.96));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .mixing-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mixing-card {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 22px;
+      padding: 16px 18px;
+      border: 1px solid rgba(248, 171, 116, 0.4);
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      max-width: 260px;
+      text-align: center;
+    }
+
+    .bottle {
+      width: 52px;
+      height: 72px;
+      border-radius: 18px 18px 12px 12px;
+      border: 1px solid rgba(248, 171, 116, 0.6);
+      background: conic-gradient(from 200deg, rgba(248, 171, 116, 0.9), rgba(251, 113, 133, 0.6), rgba(56, 189, 248, 0.4), rgba(248, 171, 116, 0.9));
+      position: relative;
+      overflow: hidden;
+      animation: float 2s ease-in-out infinite;
+    }
+
+    .bottle::before {
+      content: "";
+      position: absolute;
+      inset: 18% 10% 8%;
+      border-radius: 14px;
+      background: radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 60%);
+      opacity: 0.6;
+    }
+
+    .bottle-cap {
+      width: 26px;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      background: radial-gradient(circle at 30% 0%, #e5e7eb, #6b7280);
+      margin-bottom: 6px;
+    }
+
+    .mixing-text { font-size: 0.92rem; }
+    .mixing-sub { font-size: 0.78rem; color: var(--text-sub); }
+
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title-block">
+        <h1>
+          AI 口袋調香師
+          <span class="title-pill">step demo</span>
+        </h1>
+        <p>透過幾個問題，和一點點魔法，為你調出一瓶屬於自己的香。</p>
+      </div>
+      <div class="badge">
+        <span>🧪</span> 114-1 智慧人機互動 · 期末專案介面 Demo
+      </div>
+    </header>
+
+    <main class="layout" id="layout">
+      <!-- STEP 01：進場 -->
+      <section class="card step-card step1">
+        <div class="card-inner">
+          <div class="section-title">
+            <span class="dot"></span>
+            STEP 01 · 進場 & 開啟想像
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">這瓶香，你最想在什麼時候使用？</div>
+            <div class="field-hint">先幫它選一個最理想的場景，像幫它安排一個主要舞台。</div>
+            <div class="radio-row" id="occasion-group">
+              <div class="radio-pill">
+                <input type="radio" name="occasion" id="oc1" value="日常上課/上班" checked />
+                <label for="oc1">日常上課/上班</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="occasion" id="oc2" value="與另一半約會" />
+                <label for="oc2">與另一半約會</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="occasion" id="oc3" value="與親友相聚" />
+                <label for="oc3">與親友相聚</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="occasion" id="oc4" value="去熱鬧場合狂歡" />
+                <label for="oc4">去熱鬧場合狂歡</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="occasion" id="oc5" value="旅行的時候" />
+                <label for="oc5">旅行的時候</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="occasion" id="oc6" value="一個人自在獨處" />
+                <label for="oc6">一個人自在獨處</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" name="occasion" id="oc7" value="有重要任務的那天" />
+                <label for="oc7">有重要任務的那天</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">當別人靠近聞到時，你希望他們覺得你是？</div>
+            <div class="field-hint">可以複選，像是幫自己選幾個此刻想被理解、被看見的樣子。</div>
+            <div class="pill-row" id="persona-group">
+              <button class="pill" data-value="溫柔">溫柔</button>
+              <button class="pill" data-value="包容">包容</button>
+              <button class="pill" data-value="俐落">俐落</button>
+              <button class="pill" data-value="沉穩">沉穩</button>
+              <button class="pill" data-value="理性">理性</button>
+              <button class="pill" data-value="神秘">神秘</button>
+              <button class="pill" data-value="浪漫">浪漫</button>
+              <button class="pill" data-value="甜美">甜美</button>
+              <button class="pill" data-value="俏皮">俏皮</button>
+              <button class="pill" data-value="充滿元氣">充滿元氣</button>
+              <button class="pill" data-value="帶有鋒芒">帶有鋒芒</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">你對香味的地雷是什麼？</div>
+            <div class="field-hint">有覺得「一聞到就不行」的味道嗎？選出來，讓我們幫你避開。</div>
+            <div class="pill-row" id="avoid-group">
+              <button class="pill" data-value="太甜膩">太甜膩</button>
+              <button class="pill" data-value="粉感重">粉感重</button>
+              <button class="pill" data-value="太木質">太木質</button>
+              <button class="pill" data-value="太濃">太濃</button>
+              <button class="pill" data-value="頭暈">頭暈</button>
+              <button class="pill" data-value="太侵略">太侵略</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">對於我們現在共創的這瓶香，你還有什麼想像或期待呢？</div>
+            <div class="field-hint">可以描寫心情、畫面，或只屬於你的內心小劇場。</div>
+            <textarea
+              id="imagination"
+              placeholder="例如：其實我不想要別人聞到，但自己卻可以被這個香氣包圍、沈浸在自己的小小世界裡。"
+            ></textarea>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">整體濃度</div>
+            <div class="field-hint">如果比較敏感容易頭暈，可以選淡一點；如果想要存在感明顯一些，可以往濃一點。</div>
+            <div class="slider-row">
+              <input type="range" id="intensity" min="0" max="100" step="5" value="60" />
+              <span id="intensity-value" style="font-size:0.78rem;color:var(--text-sub);width:40px;text-align:right;">60%</span>
+            </div>
+          </div>
+
+          <button class="btn-primary" id="mix-btn">
+            <span class="icon">✨</span>
+            開始調香
+          </button>
+
+          <div class="ghost-chip">
+            下一步驟將會生成你的專屬配方與故事。
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 02：調配 & 生成 -->
+      <section class="card step-card step2">
+        <div class="card-inner">
+          <div class="section-title">
+            <span class="dot"></span>
+            STEP 02 · 調配 ＆ 生成
+          </div>
+
+          <div class="result-block" id="summary-block">
+            <div class="result-title">USAGE SCENARIO · 使用情境</div>
+            <div id="summary-text">
+              這裡會整理出一段關於「你和這瓶香」的小小摘要，讓你確認 AI 有沒有真的聽懂你。
+            </div>
+          </div>
+
+          <div class="result-block" id="explain-block">
+            <div class="result-title">WHY THESE NOTES? · 為什麼是這個配方？</div>
+            <div id="explain-text">
+              調香師會在這裡跟你說：為什麼會用這些香調來描繪你，以及它們分別照顧的是哪一種日常。
+            </div>
+          </div>
+
+          <div class="memo-card" id="memo-card">
+            <div class="memo-name" id="memo-name">Your Pocket Scent</div>
+            <div class="memo-tagline" id="memo-tagline">一瓶還在等待你按下開始的香。</div>
+
+            <div class="memo-section-title">KEY NOTES</div>
+            <div class="note-badge-row" id="memo-notes">
+              <span class="note-badge">前調：Bergamot</span>
+              <span class="note-badge">中調：Jasmine</span>
+              <span class="note-badge">後調：Cedarwood</span>
+            </div>
+
+            <div class="memo-section-title">STORY</div>
+            <div class="memo-body" id="memo-story">
+              當你完成 Step 01 並按下「開始調香」後，這裡會出現一段只屬於你的香水故事。
+            </div>
+
+            <div class="memo-section-title">HOW TO USE</div>
+            <div class="subdued">
+              可以將這張卡截圖收藏，當作未來實際調香或挑選香水時的參考：場景、氣質、香調方向，都會在這裡被好好記住。
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 調配中 overlay -->
+  <div class="mixing-overlay" id="mixing-overlay">
+    <div class="mixing-card">
+      <div class="bottle-cap"></div>
+      <div class="bottle"></div>
+      <div class="mixing-text">正在為你調香中…</div>
+      <div class="mixing-sub">把剛剛說的每一個小細節，都一滴一滴加進瓶子裡。</div>
+    </div>
+  </div>
+
+  <script>
+    // 多選 pill 行為
+    function setupPillGroup(containerId) {
+      const container = document.getElementById(containerId);
+      const pills = Array.from(container.querySelectorAll(".pill"));
+      pills.forEach(pill => {
+        pill.addEventListener("click", () => {
+          pill.classList.toggle("selected");
+        });
+      });
+      return () => {
+        return pills
+          .filter(p => p.classList.contains("selected"))
+          .map(p => p.getAttribute("data-value"));
+      };
+    }
+
+    const getPersona = setupPillGroup("persona-group");
+    const getAvoid = setupPillGroup("avoid-group");
+
+    // 濃度顯示
+    const intensityInput = document.getElementById("intensity");
+    const intensityValue = document.getElementById("intensity-value");
+    intensityInput.addEventListener("input", () => {
+      intensityValue.textContent = intensityInput.value + "%";
+    });
+
+    const layout = document.getElementById("layout");
+    const mixBtn = document.getElementById("mix-btn");
+    const overlay = document.getElementById("mixing-overlay");
+
+    mixBtn.addEventListener("click", () => {
+      const occasion = document.querySelector("input[name='occasion']:checked").value;
+      const persona = getPersona();
+      const avoid = getAvoid();
+      const imagination = document.getElementById("imagination").value.trim();
+      const intensity = Number(intensityInput.value);
+
+      overlay.classList.add("visible");
+
+      setTimeout(() => {
+        overlay.classList.remove("visible");
+        runPerfumer(occasion, persona, avoid, imagination, intensity);
+
+        layout.classList.add("show-step2");
+
+        const step2 = document.querySelector(".step-card.step2");
+        step2.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 900);
+    });
+
+    function buildSummary(occasion, persona, avoid, imagination) {
+      const parts = [];
+      if (occasion) {
+        parts.push(`你想在「${occasion}」的時候，讓這瓶香陪在身邊。`);
+      }
+      if (persona.length) {
+        parts.push(`當別人靠近時，你希望他們聞到的，不只是味道，而是一個「${persona.join("、")}」的你。`);
+      }
+      if (avoid.length) {
+        parts.push(`有幾個香味地雷是你不太能接受的：${avoid.join("、")}。這些都會被溫柔地避開。`);
+      }
+      if (imagination) {
+        parts.push(`在心裡，你已經有某個畫面：${imagination}`);
+      }
+      if (!parts.length) {
+        return "你還沒有說太多沒關係，我會先從一瓶溫柔、不打擾人的日常香開始調起。";
+      }
+      return parts.join("\n\n");
+    }
+
+    // 簡易香調資料庫
+    const notesDB = [
+      { name: "Bergamot", family: "citrus", layer: "前調" },
+      { name: "Grapefruit", family: "citrus", layer: "前調" },
+      { name: "Jasmine", family: "floral", layer: "中調" },
+      { name: "Rose", family: "floral", layer: "中調" },
+      { name: "Cedarwood", family: "woody", layer: "後調" },
+      { name: "Sandalwood", family: "woody", layer: "後調" },
+      { name: "Musk", family: "musk", layer: "後調" },
+      { name: "Amber", family: "amber", layer: "後調" }
+    ];
+
+    function pickNotes(persona, avoid) {
+      const has = (word) => persona.some(p => p.includes(word));
+      let candidates = [];
+
+      if (has("溫柔") || has("包容") || has("浪漫") || has("甜美")) {
+        candidates.push("floral", "amber");
+      }
+      if (has("俐落") || has("沉穩") || has("理性") || has("帶有鋒芒")) {
+        candidates.push("woody", "musk");
+      }
+      if (has("俏皮") || has("充滿元氣")) {
+        candidates.push("citrus", "floral");
+      }
+      if (has("神秘")) {
+        candidates.push("musk", "amber", "woody");
+      }
+
+      if (!candidates.length) candidates = ["citrus", "floral", "woody"];
+
+      const avoidFamily = [];
+      if (avoid.includes("太木質")) avoidFamily.push("woody");
+      if (avoid.includes("太甜膩")) avoidFamily.push("amber", "floral");
+
+      const filteredFamilies = [...new Set(candidates)].filter(f => !avoidFamily.includes(f));
+
+      const top = notesDB.filter(n => n.layer === "前調" && filteredFamilies.includes(n.family));
+      const mid = notesDB.filter(n => n.layer === "中調" && filteredFamilies.includes(n.family));
+      const base = notesDB.filter(n => n.layer === "後調" && filteredFamilies.includes(n.family));
+
+      return {
+        top: top.slice(0, 2),
+        mid: mid.slice(0, 2),
+        base: base.slice(0, 2)
+      };
+    }
+
+    function namePerfume(occasion, persona) {
+      if (occasion.includes("重要任務")) return "After Mission Glow";
+      if (occasion.includes("與另一半約會")) return "Hidden Heartbeat";
+      if (occasion.includes("熱鬧場合") || occasion.includes("狂歡")) return "Electric Orbit";
+      if (occasion.includes("自在獨處") || occasion.includes("獨處")) return "Soft Solitude";
+      if (occasion.includes("旅行")) return "Pocket Horizon";
+      if (occasion.includes("日常上課") || occasion.includes("上班")) {
+        if (persona.includes("俐落") || persona.includes("理性")) return "Clean Lines";
+        if (persona.includes("溫柔") || persona.includes("包容")) return "Quiet Dawn";
+        return "Pocket Daylight";
+      }
+      return "Unnamed Pocket Scent";
+    }
+
+    function conceptLine(name, occasion) {
+      if (name === "After Mission Glow") {
+        return "給每一次撐過來、完成任務後，還想溫柔抱抱自己的你。";
+      }
+      if (name === "Hidden Heartbeat") {
+        return "讓靠近的人只聞到一點點情緒起伏，就像你藏在心窩裡的小小心跳。";
+      }
+      if (name === "Soft Solitude") {
+        return "為那些選擇和自己待在一起的夜晚，把安靜變成一個有香氣的地方。";
+      }
+      if (name === "Quiet Dawn") {
+        return "像清晨第一口空氣，提醒你：就算世界很吵，你可以很溫柔。";
+      }
+      if (name === "Pocket Horizon") {
+        return "讓每一段路途都有一點固定的味道，好像走到哪裡都帶著自己的房間。";
+      }
+      if (name === "Electric Orbit") {
+        return "在人群與音樂的軌道裡，留一圈只屬於你的亮度。";
+      }
+      return "一瓶可以被帶去任何地方的小小守護香。";
+    }
+
+    // WHY THESE NOTES
+    function buildExplanation(occasion, persona, imagination, notes, intensity) {
+      const lines = [];
+
+      // 場景相關說明
+      if (occasion.includes("重要任務")) {
+        lines.push("因為你選擇了在「有重要任務的那天」使用，我讓香氣的後調更沈一點，像完成一整天的戰鬥後，慢慢鬆開肩膀的那口氣。");
+      } else if (occasion.includes("日常上課") || occasion.includes("上班")) {
+        lines.push("日常上課/上班的香水更需要耐聞且不打擾，所以前調會留得清爽，像是乾淨的空氣剛好停在你身邊。");
+      } else if (occasion.includes("自在獨處") || occasion.includes("獨處")) {
+        lines.push("在你想一個人自在獨處的時候，香氣會像一條小毯子，慢慢把你包起來，所以中、後調以比較柔和的香材為主。");
+      } else if (occasion.includes("旅行")) {
+        lines.push("旅行時的香氣會跟著你出現在各種房間和街道，因此我讓香調的變化比較溫和，不會過於搶走風景的注意力。");
+      } else if (occasion.includes("與親友相聚")) {
+        lines.push("和親友相聚的時候，香氣只需要在靠得比較近的瞬間出現，所以整體調性會偏柔和，不會蓋過擁抱與對話。");
+      } else if (occasion.includes("與另一半約會")) {
+        lines.push("約會時的香氣重點不是「遠遠就能聞到」，而是在你靠近說話、一起走路時，才慢慢浮出來，所以我讓前調留得輕盈一些，中後調貼得更近一點。");
+      } else if (occasion.includes("熱鬧場合") || occasion.includes("狂歡")) {
+        lines.push("在熱鬧場合裡，香氣會跟著你的動作和體溫出現，因此我讓中後調有一點節奏感，讓你在人群中保有自己的頻率。");
+      }
+
+      // 氣質群組：柔軟系 & 線條系
+      const softMap = ["溫柔", "包容", "浪漫", "甜美"];
+      const lineMap = ["俐落", "沉穩", "理性", "帶有鋒芒"];
+
+      const softSelected = persona.filter(p => softMap.includes(p));
+      const lineSelected = persona.filter(p => lineMap.includes(p));
+
+      if (softSelected.length) {
+        lines.push(
+          `因為你提到想被感覺成「${softSelected.join("、")}」這一類比較柔軟的氣質，我選了一些帶花感、但不過分甜的香調，讓溫柔像光暈，而不是一記重錘。`
+        );
+      }
+
+      if (lineSelected.length) {
+        lines.push(
+          `而「${lineSelected.join("、")}」這一側的你，需要一點線條感，所以我加入木質與麝香，讓尾韻保持清晰，像你做決定的樣子。`
+        );
+      }
+
+      if (persona.includes("神秘")) {
+        lines.push("為了保留一點距離感與好奇心，我讓麝香與琥珀留在後方，像晚一點才會顯形的秘密。");
+      }
+
+      // 濃度相關
+      if (intensity <= 30) {
+        lines.push("整體濃度偏淡，適合你不想成為房間裡最明顯的人，但在低頭深呼吸時，還是能聞見自己。");
+      } else if (intensity >= 75) {
+        lines.push("因為你願意讓香水的存在感明顯一點，所以配方留了較飽滿的中後調，讓重要時刻更有儀式感。");
+      }
+
+      // 自己寫的畫面
+      if (imagination) {
+        lines.push("你寫下的那個畫面，我也有放在心裡，它會成為這瓶香真正的核心。");
+      }
+
+      return lines.join("\n\n");
+    }
+
+    // STORY：依情境 + 氣質
+    function buildStory(occasion, persona, imagination) {
+      const personaLabel = persona.length
+        ? `那個「${persona.join("、")}」的你`
+        : "你自己想成為的樣子";
+
+      let base;
+
+      if (occasion.includes("與另一半約會")) {
+        base =
+          `這瓶香主要是為了你們之間那一點點距離準備的：` +
+          `不是一進門就先到達對方，而是在你靠近說話、一起走路、肩膀碰到的時候，才慢慢被聞到。` +
+          `它不會搶過眼神和對話的焦點，只是在對方靠得很近的時候，把${personaLabel}悄悄收進呼吸裡。`;
+      } else if (occasion.includes("與親友相聚")) {
+        base =
+          `和親友相聚時，這瓶香會像一個安靜待在旁邊的朋友，` +
+          `在擁抱、拍照、碰杯的瞬間才被注意到。它不會讓你變得疏離，反而只是增加一點「每次見到你都會想到的味道」，` +
+          `讓${personaLabel}被記住。`;
+      } else if (occasion.includes("熱鬧場合") || occasion.includes("狂歡")) {
+        base =
+          `在人群和音樂包圍的地方，這瓶香不會和音量比大聲，` +
+          `而是緊緊貼在你的體溫旁邊。當你在燈光下跳舞、移動、揮手時，香氣會隨著你的節奏帶出一點軌跡，` +
+          `好像在宣告：在這麼吵的地方，你依然有自己的頻率。`;
+      } else if (occasion.includes("日常上課") || occasion.includes("上班")) {
+        base =
+          `這瓶香會待在你的筆記本、螢幕光與課桌之間。當你被行程擠到喘不過氣，只要低頭深呼吸一次，` +
+          `香氣就會提醒你：除了身份和角色之外，還有${personaLabel}，也需要被照顧。`;
+      } else if (occasion.includes("重要任務")) {
+        base =
+          `在你走出會議室、交完報告、或拿到成績單的那一刻，很多人只記得結果，` +
+          `這瓶香只負責記得你的過程：加班的夜、寫到手酸的字，以及還是沒有放棄的那個瞬間。` +
+          `每次聞到，它都在提醒你，你不是只剩下「完成任務的人」，也是${personaLabel}。`;
+      } else if (occasion.includes("自在獨處") || occasion.includes("獨處")) {
+        base =
+          `在所有人都以為你只是躺在床上滑手機的晚上，只有你和這瓶香知道，` +
+          `你其實在恢復世界看不見的那一部分。香氣會像一條小毯子，慢慢把散落一地的自己，一顆顆撿回來，` +
+          `讓${personaLabel}有地方好好坐下來。`;
+      } else if (occasion.includes("旅行")) {
+        base =
+          `它會在不同城市的浴室、窗邊、旅館桌上出現，像是一個悄悄跟著你移動的座標。` +
+          `不管你今天身在陌生的巷子、車站還是機場，只要聞到這個味道，就像短暫回到自己的房間，` +
+          `讓${personaLabel}有一個熟悉的空氣可以停留。`;
+      } else {
+        base =
+          `這不是一瓶要替你扮演別人的香水，而是替你記住一些細節的容器：走廊盡頭的燈、窗邊的座位、` +
+          `以及那些只有你自己知道的小小瞬間。每次噴上，它都在提醒你，${personaLabel}也值得被好好看見。`;
+      }
+
+      if (imagination) {
+        return imagination + "\n\n" + base;
+      }
+      return base;
+    }
+
+    function runPerfumer(occasion, persona, avoid, imagination, intensity) {
+      const summaryText = buildSummary(occasion, persona, avoid, imagination);
+      document.getElementById("summary-text").innerHTML = summaryText.replace(/\n/g, "<br>");
+
+      const notes = pickNotes(persona, avoid);
+      const name = namePerfume(occasion, persona);
+      const concept = conceptLine(name, occasion);
+      const explanation = buildExplanation(occasion, persona, imagination, notes, intensity);
+      const story = buildStory(occasion, persona, imagination);
+
+      document.getElementById("explain-text").innerHTML = explanation.replace(/\n/g, "<br>");
+
+      document.getElementById("memo-name").textContent = name;
+      document.getElementById("memo-tagline").textContent = concept;
+
+      const memoNotes = document.getElementById("memo-notes");
+      memoNotes.innerHTML = "";
+      const pushNoteBadge = (layerName, list) => {
+        list.forEach(n => {
+          const span = document.createElement("span");
+          span.className = "note-badge";
+          span.textContent = `${layerName}：${n.name}`;
+          memoNotes.appendChild(span);
+        });
+      };
+      pushNoteBadge("前調", notes.top);
+      pushNoteBadge("中調", notes.mid);
+      pushNoteBadge("後調", notes.base);
+
+      document.getElementById("memo-story").textContent = story;
+    }
+  </script>
+</body>
+</html>
